@@ -65,7 +65,7 @@ describe("task run concurrency limits hooks", () => {
 		// ------------ Initialize hooks to test
 		const { result } = renderHook(
 			() => useListTaskRunConcurrencyLimits(filter),
-			{ wrapper: createWrapper({}) },
+			{ wrapper: createWrapper() },
 		);
 
 		// ------------ Assert
@@ -85,7 +85,7 @@ describe("task run concurrency limits hooks", () => {
 		// ------------ Initialize hooks to test
 		const { result } = renderHook(
 			() => useGetTaskRunConcurrencyLimit(mockData.id),
-			{ wrapper: createWrapper({}) },
+			{ wrapper: createWrapper() },
 		);
 
 		// ------------ Assert

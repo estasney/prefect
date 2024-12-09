@@ -2,6 +2,10 @@ import "./mocks";
 import { Toaster } from "@/components/ui/toaster";
 import { VariablesDataTable } from "@/components/variables/data-table";
 import { router } from "@/router";
+<<<<<<< HEAD
+=======
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+>>>>>>> 7594db2791 (wip)
 import { RouterProvider } from "@tanstack/react-router";
 import {
 	getByLabelText,
@@ -11,8 +15,13 @@ import {
 	screen,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+<<<<<<< HEAD
 import { createWrapper, server } from "@tests/utils";
 import { http, HttpResponse } from "msw";
+=======
+import { HttpResponse } from "msw";
+import { http } from "msw";
+>>>>>>> 7594db2791 (wip)
 import {
 	afterEach,
 	beforeAll,
@@ -22,6 +31,10 @@ import {
 	it,
 	vi,
 } from "vitest";
+<<<<<<< HEAD
+=======
+import { server } from "../mocks/node";
+>>>>>>> 7594db2791 (wip)
 
 const renderVariablesPage = async () => {
 	const user = userEvent.setup();
@@ -36,6 +49,8 @@ const renderVariablesPage = async () => {
 describe("Variables page", () => {
 	it("should render with empty state", async () => {
 		await renderVariablesPage();
+		screen.logTestingPlaygroundURL();
+
 		expect(screen.getByText("Add a variable to get started")).toBeVisible();
 		expect(screen.getByRole("button", { name: "Add Variable" })).toBeVisible();
 	});

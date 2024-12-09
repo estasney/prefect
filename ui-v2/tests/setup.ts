@@ -1,6 +1,12 @@
+<<<<<<< HEAD
 /// <reference lib="dom" />
 import * as matchers from "@testing-library/jest-dom/matchers";
 import { cleanup } from "@testing-library/react";
+=======
+import * as matchers from "@testing-library/jest-dom/matchers";
+import { cleanup } from "@testing-library/react";
+/// <reference lib="dom" />
+>>>>>>> 7594db2791 (wip)
 import { afterAll, afterEach, beforeAll, expect, vi } from "vitest";
 import "@testing-library/jest-dom";
 import { server } from "./utils";
