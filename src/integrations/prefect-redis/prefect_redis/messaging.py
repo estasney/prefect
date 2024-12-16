@@ -13,6 +13,7 @@ from typing import (
 )
 
 import orjson
+from pydantic import Field
 from redis.asyncio import Redis
 from redis.exceptions import ResponseError
 from typing_extensions import Self
@@ -22,6 +23,7 @@ from prefect.server.utilities.messaging import Cache as _Cache
 from prefect.server.utilities.messaging import Consumer as _Consumer
 from prefect.server.utilities.messaging import Message, MessageHandler, StopConsumer
 from prefect.server.utilities.messaging import Publisher as _Publisher
+from prefect.settings.base import PrefectBaseSettings, _build_settings_config
 
 logger = get_logger(__name__)
 
@@ -31,12 +33,20 @@ M = TypeVar("M", bound=Message)
 MESSAGE_DEDUPLICATION_LOOKBACK = timedelta(minutes=5)
 
 
+class RedisSettings(PrefectBaseSettings):
+    model_config = _build_settings_config(("prefect", "redis"))
+
+    redis_host: str = Field(default="localhost")
+    redis_port: int = Field(default=6379)
+    redis_db: int = Field(default=0)
+
+
 def get_async_redis_client() -> Redis:
-    # TODO - actually implement
+    settings = RedisSettings()
     return Redis(
-        host="localhost",
-        port=6379,
-        db=0,
+        host=settings.redis_host,
+        port=settings.redis_port,
+        db=settings.redis_db,
     )
 
 
