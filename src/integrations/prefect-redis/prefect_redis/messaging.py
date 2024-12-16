@@ -240,7 +240,7 @@ class Consumer(_Consumer):
         min_idle_time: timedelta = timedelta(seconds=1),
         should_process_pending_messages: bool = False,
         starting_message_id: str = "0",
-        automatically_acknowledge: bool = True,
+        automatically_acknowledge: bool = False,  # TODO - should be true
     ):
         self.name = name
         self.stream = stream
@@ -277,8 +277,8 @@ class Consumer(_Consumer):
 
             for message_id, message in claimed_messages:
                 redis_stream_message = Message(
-                    data=message["data"],
-                    attributes=message.get("attributes", {}),
+                    data=message[b"data"],
+                    attributes=message.get(b"attributes", {}),
                     acker=partial(acker, message_id),
                 )
                 try:
@@ -343,8 +343,8 @@ class Consumer(_Consumer):
                 for message_id, message in messages:
                     try:
                         redis_stream_message = Message(
-                            data=message["data"],
-                            attributes=orjson.loads(message["attributes"]),
+                            data=message[b"data"],
+                            attributes=orjson.loads(message.get(b"attributes", {})),
                             acker=partial(acker, message_id),
                         )
                         await handler(redis_stream_message)
@@ -356,6 +356,7 @@ class Consumer(_Consumer):
                         return
                     except Exception:
                         logger.exception("Error processing message %s", message_id)
+                        logger.error(message)
 
 
 @asynccontextmanager
