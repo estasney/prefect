@@ -190,6 +190,15 @@ def create_consumer(topic: str, **kwargs) -> Consumer:
     Returns:
         a new Consumer instance
     """
-    module = importlib.import_module(PREFECT_MESSAGING_BROKER.value())
+    broker = PREFECT_MESSAGING_BROKER.value()
+    module = importlib.import_module(broker)
     assert isinstance(module, BrokerModule)
-    return module.Consumer(topic, **kwargs)
+    if broker == "prefect_redis.messaging":
+        kwargs = {
+            "name": topic,
+            "stream": topic,
+            "group": topic,
+        }
+        return module.Consumer(**kwargs)
+    else:
+        return module.Consumer(topic)
