@@ -43,14 +43,14 @@ class PrefectBaseSettings(BaseSettings):
 
         See https://docs.pydantic.dev/latest/concepts/pydantic_settings/#customise-settings-sources
         """
-        env_filter = set()
+        env_filter: set[str] = set()
         for field_name, field in settings_cls.model_fields.items():
             if field.validation_alias is not None and isinstance(
                 field.validation_alias, AliasChoices
             ):
                 for alias in field.validation_alias.choices:
                     if isinstance(alias, AliasPath) and len(alias.path) > 0:
-                        env_filter.add(alias.path[0])
+                        env_filter.add(str(alias.path[0]))
             env_filter.add(field_name)
         return (
             init_settings,
@@ -192,7 +192,7 @@ def _add_environment_variables(
 
 
 def _build_settings_config(
-    path: Tuple[str, ...] = tuple(),
+    path: tuple[str, ...] = tuple(),
 ) -> PrefectSettingsConfigDict:
     env_prefix = f"PREFECT_{'_'.join(path).upper()}_" if path else "PREFECT_"
     return PrefectSettingsConfigDict(

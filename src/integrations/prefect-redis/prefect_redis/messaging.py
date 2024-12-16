@@ -9,12 +9,11 @@ from typing import (
     AsyncGenerator,
     Awaitable,
     Callable,
-    Dict,
-    List,
     TypeVar,
 )
 
 import orjson
+from pydantic import Field
 from redis.asyncio import Redis
 from redis.exceptions import ResponseError
 from typing_extensions import Self
@@ -24,6 +23,7 @@ from prefect.server.utilities.messaging import Cache as _Cache
 from prefect.server.utilities.messaging import Consumer as _Consumer
 from prefect.server.utilities.messaging import Message, MessageHandler, StopConsumer
 from prefect.server.utilities.messaging import Publisher as _Publisher
+from prefect.settings.base import PrefectBaseSettings, _build_settings_config
 
 logger = get_logger(__name__)
 
@@ -33,12 +33,20 @@ M = TypeVar("M", bound=Message)
 MESSAGE_DEDUPLICATION_LOOKBACK = timedelta(minutes=5)
 
 
+class RedisSettings(PrefectBaseSettings):
+    model_config = _build_settings_config(("prefect", "redis"))
+
+    redis_host: str = Field(default="localhost")
+    redis_port: int = Field(default=6379)
+    redis_db: int = Field(default=0)
+
+
 def get_async_redis_client() -> Redis:
-    # TODO - actually implement
+    settings = RedisSettings()
     return Redis(
-        host="localhost",
-        port=6379,
-        db=0,
+        host=settings.redis_host,
+        port=settings.redis_port,
+        db=settings.redis_db,
     )
 
 
@@ -53,7 +61,7 @@ class RedisCache(_Cache):
         # TODO - do we need this?
         return
 
-    async def without_duplicates(self, attribute: str, messages: List[M]) -> List[M]:
+    async def without_duplicates(self, attribute: str, messages: list[M]) -> list[M]:
         messages_with_attribute = []
         messages_without_attribute = []
         async with self._client.pipeline() as p:
@@ -79,7 +87,7 @@ class RedisCache(_Cache):
             m for i, m in enumerate(messages_with_attribute) if results[i]
         ] + messages_without_attribute
 
-    async def forget_duplicates(self, attribute: str, messages: List[M]) -> None:
+    async def forget_duplicates(self, attribute: str, messages: list[M]) -> None:
         async with self._client.pipeline() as p:
             for m in messages:
                 if m.attributes is None or attribute not in m.attributes:
@@ -101,7 +109,7 @@ class RedisStreamsMessage:
     def __init__(
         self,
         data: bytes | str,
-        attributes: Dict[str, Any],
+        attributes: dict[str, Any],
         acker: Callable[[], Awaitable[None]] | None = None,
     ) -> None:
         self.data = data
@@ -145,7 +153,7 @@ class RedisStreamsPublisher(_Publisher):
     async def __aenter__(self) -> Self:
         self._client = get_async_redis_client()
 
-        self._batch: List[Message] = list()
+        self._batch: list[Message] = list()
         if self.publish_every is not None:
             interval = self.publish_every.total_seconds()
 
@@ -163,7 +171,7 @@ class RedisStreamsPublisher(_Publisher):
             self._periodic_task.cancel()
         await asyncio.shield(self._publish_current_batch())
 
-    async def publish_data(self, data: bytes, attributes: Dict[str, str]):
+    async def publish_data(self, data: bytes, attributes: dict[str, str]):
         """
         Publishes the given data to Redis Streams
 
@@ -352,7 +360,7 @@ async def ephemeral_subscription(
     app_name: str,
     source: str | None = None,
     group: str | None = None,
-) -> AsyncGenerator[Dict[str, Any], None]:
+) -> AsyncGenerator[dict[str, Any], None]:
     """
     Creates an ephemeral subscription to the given source, removing it when the context exits.
 
