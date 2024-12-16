@@ -19,7 +19,6 @@ from prefect_redis.messaging import (
     Message,
     Publisher,
     StopConsumer,
-    ephemeral_subscription,
 )
 
 from prefect.server.utilities.messaging import (
@@ -27,6 +26,7 @@ from prefect.server.utilities.messaging import (
     create_cache,
     create_consumer,
     create_publisher,
+    ephemeral_subscription,
 )
 from prefect.server.utilities.messaging.memory import (
     MemoryMessage,
@@ -39,19 +39,13 @@ from prefect.settings import (
 
 
 @pytest.fixture(autouse=True)
-def redis_cache_module():
-    with temporary_settings(
-        updates={PREFECT_MESSAGING_CACHE: "prefect_redis.messaging"}
-    ):
-        yield
+def events_configuration():
+    pass  # TODO - do we need this?
 
 
 @pytest.fixture(autouse=True)
-def redis_broker_module():
-    with temporary_settings(
-        updates={PREFECT_MESSAGING_BROKER: "prefect_redis.messaging"}
-    ):
-        yield
+def clear_topics(events_configuration: None):
+    pass  # TODO - do we need this?
 
 
 @pytest.fixture
@@ -86,17 +80,13 @@ def pytest_generate_tests(metafunc: pytest.Metafunc):
     if "broker_module_name" in metafunc.fixturenames:
         metafunc.parametrize(
             "broker_module_name",
-            [
-                "prefect.server.utilities.messaging.memory",
-            ],
+            ["prefect.server.utilities.messaging.memory", "prefect_redis.messaging"],
         )
 
     if "cache_name" in metafunc.fixturenames:
         metafunc.parametrize(
             "cache_name",
-            [
-                "prefect.server.utilities.messaging.memory",
-            ],
+            ["prefect.server.utilities.messaging.memory", "prefect_redis.messaging"],
         )
 
 

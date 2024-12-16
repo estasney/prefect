@@ -39,6 +39,7 @@ class RedisSettings(PrefectBaseSettings):
     redis_host: str = Field(default="localhost")
     redis_port: int = Field(default=6379)
     redis_db: int = Field(default=0)
+    redis_username: str = Field(default="default")
 
 
 def get_async_redis_client() -> Redis:
@@ -46,12 +47,14 @@ def get_async_redis_client() -> Redis:
     return Redis(
         host=settings.redis_host,
         port=settings.redis_port,
-        db=settings.redis_db,
+        db=str(settings.redis_db),
+        username=settings.redis_username,
+        password="",
     )
 
 
 class Cache(_Cache):
-    def __init__(self, topic: str):
+    def __init__(self, topic: str = "change-me"):
         super().__init__()
         self.topic = topic  # TODO - should this go on base class?
 
@@ -370,6 +373,7 @@ async def ephemeral_subscription(
     Will create a consumer group for Redis Streams.
     """
     # consumer group creation will be handled by the consumer
+    source = source or "change-me"
     group_name = group or f"ephemeral-{socket.gethostname()}-{uuid.uuid4().hex}"
     logger.info("Created ephemeral consumer group %s for stream %s", group_name, source)
     redis_client: Redis = get_async_redis_client()
@@ -384,3 +388,16 @@ async def ephemeral_subscription(
         logger.info(
             "Deleted ephemeral consumer group %s for stream %s", group_name, source
         )
+
+
+@asynccontextmanager
+async def break_topic():
+    from unittest import mock
+
+    publishing_mock = mock.AsyncMock(side_effect=ValueError("oops"))
+
+    with mock.patch(
+        "prefect.server.utilities.messaging.memory.Topic.publish",
+        publishing_mock,
+    ):
+        yield
