@@ -50,7 +50,7 @@ def get_async_redis_client() -> Redis:
     )
 
 
-class RedisCache(_Cache):
+class Cache(_Cache):
     def __init__(self, topic: str):
         super().__init__()
         self.topic = topic  # TODO - should this go on base class?
@@ -101,7 +101,7 @@ class RedisCache(_Cache):
             await p.execute()
 
 
-class RedisStreamsMessage:
+class Message:
     """
     A message sent to a Redis stream.
     """
@@ -124,7 +124,7 @@ class RedisStreamsMessage:
         await self.acker()
 
 
-class RedisStreamsPublisher(_Publisher):
+class Publisher(_Publisher):
     """
     A publisher that sends events to Redis Streams
 
@@ -182,7 +182,7 @@ class RedisStreamsPublisher(_Publisher):
         if not hasattr(self, "_batch"):
             raise RuntimeError("Use this publisher as an async context manager")
 
-        self._batch.append(RedisStreamsMessage(data=data, attributes=attributes))
+        self._batch.append(Message(data=data, attributes=attributes))
         if len(self._batch) > self.batch_size:
             await asyncio.shield(self._publish_current_batch())
 
@@ -210,7 +210,7 @@ class RedisStreamsPublisher(_Publisher):
             raise
 
 
-class RedisStreamsConsumer(_Consumer):
+class Consumer(_Consumer):
     """
     Consumer implementation for Redis Streams.
 
@@ -273,7 +273,7 @@ class RedisStreamsConsumer(_Consumer):
                 break
 
             for message_id, message in claimed_messages:
-                redis_stream_message = RedisStreamsMessage(
+                redis_stream_message = Message(
                     data=message["data"],
                     attributes=message.get("attributes", {}),
                     acker=partial(acker, message_id),
@@ -339,7 +339,7 @@ class RedisStreamsConsumer(_Consumer):
             for _, messages in stream_entries:
                 for message_id, message in messages:
                     try:
-                        redis_stream_message = RedisStreamsMessage(
+                        redis_stream_message = Message(
                             data=message["data"],
                             attributes=orjson.loads(message["attributes"]),
                             acker=partial(acker, message_id),
