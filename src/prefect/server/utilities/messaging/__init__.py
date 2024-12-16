@@ -182,7 +182,7 @@ async def ephemeral_subscription(topic: str) -> AsyncGenerator[Dict[str, Any], N
         yield consumer_create_kwargs
 
 
-def create_consumer(topic: str, **kwargs) -> Consumer:
+def create_consumer(topic: str, **kwargs: Any) -> Consumer:
     """
     Creates a new consumer with the applications default settings.
     Args:
@@ -201,4 +201,4 @@ def create_consumer(topic: str, **kwargs) -> Consumer:
         }
         return module.Consumer(**kwargs)
     else:
-        return module.Consumer(topic)
+        return module.Consumer(topic, **kwargs)

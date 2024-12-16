@@ -10,6 +10,7 @@ from typing import (
     Awaitable,
     Callable,
     TypeVar,
+    Union,
 )
 
 import orjson
@@ -119,6 +120,9 @@ class Message:
         self.attributes = attributes
         self.acker = acker
 
+    def __eq__(self, other: Any) -> bool:
+        return self.data == other.data and self.attributes == other.attributes
+
     async def acknowledge(self) -> None:
         """
         Acknowledges the message.
@@ -151,7 +155,7 @@ class Publisher(_Publisher):
         self.deduplicate_by = deduplicate_by
         self.batch_size = batch_size
         self.publish_every = publish_every
-        self._periodic_task: asyncio.Task | None = None
+        self._periodic_task: asyncio.Task[None] | None = None
 
     async def __aenter__(self) -> Self:
         self._client = get_async_redis_client()
@@ -169,12 +173,12 @@ class Publisher(_Publisher):
 
         return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback):
+    async def __aexit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
         if self._periodic_task:
             self._periodic_task.cancel()
         await asyncio.shield(self._publish_current_batch())
 
-    async def publish_data(self, data: bytes, attributes: dict[str, str]):
+    async def publish_data(self, data: Union[str, bytes], attributes: dict[str, str]):
         """
         Publishes the given data to Redis Streams
 
@@ -185,9 +189,17 @@ class Publisher(_Publisher):
         if not hasattr(self, "_batch"):
             raise RuntimeError("Use this publisher as an async context manager")
 
-        self._batch.append(Message(data=data, attributes=attributes))
-        if len(self._batch) > self.batch_size:
-            await asyncio.shield(self._publish_current_batch())
+        # Ensure data is bytes
+        if isinstance(data, str):
+            data = data.encode()
+
+        await self._client.xadd(
+            self.stream,
+            {
+                "data": data,  # Keep as bytes
+                "attributes": orjson.dumps(attributes),
+            },
+        )
 
     async def _publish_current_batch(self) -> None:
         if self.deduplicate_by:
@@ -238,9 +250,9 @@ class Consumer(_Consumer):
         group: str,
         block: timedelta = timedelta(seconds=1),
         min_idle_time: timedelta = timedelta(seconds=1),
-        should_process_pending_messages: bool = False,
+        should_process_pending_messages: bool = True,
         starting_message_id: str = "0",
-        automatically_acknowledge: bool = False,  # TODO - should be true
+        automatically_acknowledge: bool = True,
     ):
         self.name = name
         self.stream = stream
@@ -278,7 +290,7 @@ class Consumer(_Consumer):
             for message_id, message in claimed_messages:
                 redis_stream_message = Message(
                     data=message[b"data"],
-                    attributes=message.get(b"attributes", {}),
+                    attributes=orjson.loads(message.get(b"attributes", b"{}")),
                     acker=partial(acker, message_id),
                 )
                 try:
@@ -297,21 +309,9 @@ class Consumer(_Consumer):
         handler: MessageHandler,
         message_batch_size: int = 1,
     ) -> None:
-        """
-        Runs the consumer to receive messages from the Redis stream named `stream` in
-        the consumer group named `group`, then calling `handler` for each message
-        received.
-
-        Args:
-            handler: the function to call for each message
-            message_batch_size: how many messages the handler will handle in batches; if
-                the handler processes messages independently without batching, leave this
-                at 1
-        """
         redis_client: Redis = get_async_redis_client()
 
         try:
-            # Ensure the consumer group exists
             await redis_client.xgroup_create(
                 self.stream, self.group, id=self.starting_message_id, mkstream=True
             )
@@ -342,9 +342,14 @@ class Consumer(_Consumer):
             for _, messages in stream_entries:
                 for message_id, message in messages:
                     try:
+                        # Convert bytes to str if needed
+                        data = message[b"data"]
+                        if isinstance(data, bytes):
+                            data = data.decode()
+
                         redis_stream_message = Message(
-                            data=message[b"data"],
-                            attributes=orjson.loads(message.get(b"attributes", {})),
+                            data=data,
+                            attributes=orjson.loads(message.get(b"attributes", b"{}")),
                             acker=partial(acker, message_id),
                         )
                         await handler(redis_stream_message)
@@ -361,26 +366,22 @@ class Consumer(_Consumer):
 
 @asynccontextmanager
 async def ephemeral_subscription(
-    app_name: str,
+    topic: str,
     source: str | None = None,
     group: str | None = None,
 ) -> AsyncGenerator[dict[str, Any], None]:
     """
-    Creates an ephemeral subscription to the given source, removing it when the context exits.
-
-    Will create a subscription for PubSub. If the process crashes, the subscription will expire in 1 day (the
-    lowest value that Pub/Sub supports).
+    Creates an ephemeral subscription to the given topic, removing it when the context exits.
 
     Will create a consumer group for Redis Streams.
     """
-    # consumer group creation will be handled by the consumer
-    source = source or "change-me"
+    source = source or topic
     group_name = group or f"ephemeral-{socket.gethostname()}-{uuid.uuid4().hex}"
     logger.info("Created ephemeral consumer group %s for stream %s", group_name, source)
     redis_client: Redis = get_async_redis_client()
     try:
         await redis_client.xgroup_create(source, group_name, mkstream=True)
-        yield {"name": app_name, "source": source, "group": group_name}
+        yield {"topic": topic}
     except Exception:
         logger.exception("Error in ephemeral subscription")
         raise

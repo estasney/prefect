@@ -184,6 +184,7 @@ async def test_stopping_consumer_without_acking(
     assert message.attributes == {"howdy": "partner"}
 
     remaining_message = await drain_one(consumer)
+    breakpoint()
     assert remaining_message == message
 
 
