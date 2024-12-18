@@ -107,7 +107,7 @@ const DeploymentsIndexRoute = DeploymentsIndexImport.update({
 const ConcurrencyLimitsIndexRoute = ConcurrencyLimitsIndexImport.update({
   id: '/concurrency-limits/',
   path: '/concurrency-limits/',
-
+  getParentRoute: () => rootRoute,
 } as any)
 
 const RunsTaskRunIdRoute = RunsTaskRunIdImport.update({
