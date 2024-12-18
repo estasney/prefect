@@ -24,6 +24,7 @@ import { Route as RunsIndexImport } from './routes/runs/index'
 import { Route as FlowsIndexImport } from './routes/flows/index'
 import { Route as DeploymentsIndexImport } from './routes/deployments/index'
 import { Route as ConcurrencyLimitsIndexImport } from './routes/concurrency-limits/index'
+import { Route as RunsTaskRunIdImport } from './routes/runs/task-run.$id'
 import { Route as RunsFlowRunIdImport } from './routes/runs/flow-run.$id'
 import { Route as FlowsFlowIdImport } from './routes/flows/flow.$id'
 import { Route as DeploymentsDeploymentIdImport } from './routes/deployments/deployment.$id'
@@ -106,6 +107,12 @@ const DeploymentsIndexRoute = DeploymentsIndexImport.update({
 const ConcurrencyLimitsIndexRoute = ConcurrencyLimitsIndexImport.update({
   id: '/concurrency-limits/',
   path: '/concurrency-limits/',
+
+} as any)
+
+const RunsTaskRunIdRoute = RunsTaskRunIdImport.update({
+  id: '/runs/task-run/$id',
+  path: '/runs/task-run/$id',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -257,6 +264,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RunsFlowRunIdImport
       parentRoute: typeof rootRoute
     }
+    '/runs/task-run/$id': {
+      id: '/runs/task-run/$id'
+      path: '/runs/task-run/$id'
+      fullPath: '/runs/task-run/$id'
+      preLoaderRoute: typeof RunsTaskRunIdImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -280,6 +294,7 @@ export interface FileRoutesByFullPath {
   '/deployments/deployment/$id': typeof DeploymentsDeploymentIdRoute
   '/flows/flow/$id': typeof FlowsFlowIdRoute
   '/runs/flow-run/$id': typeof RunsFlowRunIdRoute
+  '/runs/task-run/$id': typeof RunsTaskRunIdRoute
 }
 
 export interface FileRoutesByTo {
@@ -300,6 +315,7 @@ export interface FileRoutesByTo {
   '/deployments/deployment/$id': typeof DeploymentsDeploymentIdRoute
   '/flows/flow/$id': typeof FlowsFlowIdRoute
   '/runs/flow-run/$id': typeof RunsFlowRunIdRoute
+  '/runs/task-run/$id': typeof RunsTaskRunIdRoute
 }
 
 export interface FileRoutesById {
@@ -321,6 +337,7 @@ export interface FileRoutesById {
   '/deployments/deployment/$id': typeof DeploymentsDeploymentIdRoute
   '/flows/flow/$id': typeof FlowsFlowIdRoute
   '/runs/flow-run/$id': typeof RunsFlowRunIdRoute
+  '/runs/task-run/$id': typeof RunsTaskRunIdRoute
 }
 
 export interface FileRouteTypes {
@@ -343,6 +360,7 @@ export interface FileRouteTypes {
     | '/deployments/deployment/$id'
     | '/flows/flow/$id'
     | '/runs/flow-run/$id'
+    | '/runs/task-run/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -362,6 +380,7 @@ export interface FileRouteTypes {
     | '/deployments/deployment/$id'
     | '/flows/flow/$id'
     | '/runs/flow-run/$id'
+    | '/runs/task-run/$id'
   id:
     | '__root__'
     | '/'
@@ -381,6 +400,7 @@ export interface FileRouteTypes {
     | '/deployments/deployment/$id'
     | '/flows/flow/$id'
     | '/runs/flow-run/$id'
+    | '/runs/task-run/$id'
   fileRoutesById: FileRoutesById
 }
 
@@ -402,6 +422,7 @@ export interface RootRouteChildren {
   DeploymentsDeploymentIdRoute: typeof DeploymentsDeploymentIdRoute
   FlowsFlowIdRoute: typeof FlowsFlowIdRoute
   RunsFlowRunIdRoute: typeof RunsFlowRunIdRoute
+  RunsTaskRunIdRoute: typeof RunsTaskRunIdRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -423,6 +444,7 @@ const rootRouteChildren: RootRouteChildren = {
   DeploymentsDeploymentIdRoute: DeploymentsDeploymentIdRoute,
   FlowsFlowIdRoute: FlowsFlowIdRoute,
   RunsFlowRunIdRoute: RunsFlowRunIdRoute,
+  RunsTaskRunIdRoute: RunsTaskRunIdRoute,
 }
 
 export const routeTree = rootRoute
@@ -451,7 +473,8 @@ export const routeTree = rootRoute
         "/concurrency-limits/concurrency-limit/$id",
         "/deployments/deployment/$id",
         "/flows/flow/$id",
-        "/runs/flow-run/$id"
+        "/runs/flow-run/$id",
+        "/runs/task-run/$id"
       ]
     },
     "/": {
@@ -504,6 +527,9 @@ export const routeTree = rootRoute
     },
     "/runs/flow-run/$id": {
       "filePath": "runs/flow-run.$id.tsx"
+    },
+    "/runs/task-run/$id": {
+      "filePath": "runs/task-run.$id.tsx"
     }
   }
 }
