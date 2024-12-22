@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   postgres:
     image: postgres:latest
@@ -12,54 +11,49 @@ services:
     ports:
       - "5432:5432"
 
+  # A multi-stage build for the Prefect server
+  # that copies your local repo, installs it in editable mode,
+  # and starts uvicorn with OTEL instrumentation.
   prefect-server:
-    image: python:3.10-slim
     container_name: prefect-server
+    build:
+      context: ..
+      dockerfile: load_testing/Dockerfile.server
     depends_on:
       - postgres
-    volumes:
-      # Mount your local Prefect source if needed; otherwise remove/adjust
-      - ../prefect/src:/app
-    working_dir: /app
     environment:
-      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://postgres:prefect_password@postgres:5432/prefect
-      OTEL_SERVICE_NAME: prefect-server
-      OTEL_TRACES_EXPORTER: otlp
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://collector:4317   # Adjust to your collector host
-      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
-      OTEL_LOG_LEVEL: debug
-      PYTHONPATH: /app
-    command: >
-      /bin/bash -c "
-        pip install --no-cache-dir opentelemetry-instrument uvicorn prefect
-        opentelemetry-instrument
-          uvicorn
-          --factory prefect.server.api.server:create_app
-          --host 0.0.0.0
-          --port 4200
-          --timeout-keep-alive 5
-      "
+      # Prefect + Postgres
+      PREFECT_API_DATABASE_CONNECTION_URL: "postgresql+asyncpg://postgres:prefect_password@postgres:5432/prefect"
+
+      # OTEL environment (point to your collector in local-telemetry)
+      OTEL_SERVICE_NAME: "prefect-server"
+      OTEL_TRACES_EXPORTER: "otlp"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://collector:4317"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_LOG_LEVEL: "debug"
+
+    # Expose API on port 4200
     ports:
       - "4200:4200"
+    # Mount your local Prefect source code so changes take effect without rebuild
+    volumes:
+      - ../src:/app/src
 
+  # A multi-stage build for the Prefect worker container
+  # that uses uv to do an editable install, creates the work pool / deployments,
+  # then starts the worker.
   prefect-worker:
-    image: python:3.10-slim
     container_name: prefect-worker
+    build:
+      context: ..
+      dockerfile: load_testing/Dockerfile.worker
     depends_on:
       - prefect-server
-    volumes:
-      - ../prefect/src:/app
-    working_dir: /app
     environment:
-      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://postgres:prefect_password@postgres:5432/prefect
-      PYTHONPATH: /app
-    command: >
-      /bin/bash -c "
-        pip install --no-cache-dir prefect
-        prefect --no-prompt work-pool create local --type process --overwrite &&
-        prefect --no-prompt deploy --all --prefect-file load_testing/prefect.yaml &&
-        prefect worker start -p local
-      "
+      PREFECT_API_DATABASE_CONNECTION_URL: "postgresql+asyncpg://postgres:prefect_password@postgres:5432/prefect"
+    # In case you want to keep code in sync, mount again:
+    volumes:
+      - ../src:/app/src
 
 volumes:
   prefectdb:

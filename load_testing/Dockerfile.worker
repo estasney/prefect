@@ -1,0 +1,16 @@
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS builder
+WORKDIR /app
+COPY . /app
+RUN uv pip install --system -e . --compile-bytecode
+
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+WORKDIR /app
+COPY --from=builder /app /app
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+
+# Start the worker (creates a work pool, deploys flows, then runs the worker)
+CMD uv run bash -c "\
+    prefect --no-prompt work-pool create local --type process --overwrite && \
+    prefect --no-prompt deploy --all --prefect-file load_testing/prefect.yaml && \
+    prefect worker start -p local \
+    "

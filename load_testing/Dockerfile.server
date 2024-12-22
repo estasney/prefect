@@ -1,0 +1,37 @@
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS builder
+
+WORKDIR /app
+
+COPY . /app
+
+# Install dependencies in editable mode
+RUN uv pip install --system -e . --compile-bytecode && \
+    uv pip install --system \
+    opentelemetry-distro==0.50b0 \
+    opentelemetry-instrumentation==0.50b0 \
+    opentelemetry-api==1.29.0 \
+    opentelemetry-sdk==1.29.0 \
+    opentelemetry-exporter-otlp==1.29.0 \
+    opentelemetry-instrumentation-fastapi==0.50b0 \
+    opentelemetry-instrumentation-sqlalchemy==0.50b0 \
+    opentelemetry-instrumentation-asyncpg==0.50b0 \
+    opentelemetry-instrumentation-asgi==0.50b0 \
+    opentelemetry-instrumentation-logging==0.50b0
+
+# Final stage runs the server
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+WORKDIR /app
+
+# Copy the environment from the builder
+COPY --from=builder /app /app
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+
+EXPOSE 4200
+
+# By default, we run the Prefect server using uvicorn + OpenTelemetry instrumentation
+CMD uv run opentelemetry-instrument \
+    uvicorn \
+    --factory prefect.server.api.server:create_app \
+    --host 0.0.0.0 \
+    --port 4200 \
+    --timeout-keep-alive 5
