@@ -1,3 +1,4 @@
+import { AutomationsSelect } from "./action-automations-fields/automations-select";
 import { ActionChangeFlowRunStateFields } from "./action-change-flow-run-state-fields";
 import type { ActionsSchema } from "./action-type-schemas";
 
@@ -22,8 +23,9 @@ export const ActionTypeAdditionalFields = ({
 		case "resume-work-pool":
 			return <div>TODO Work pool</div>;
 		case "pause-automation":
+			return <AutomationsSelect action="Pause" />;
 		case "resume-automation":
-			return <div>TODO Automation</div>;
+			return <AutomationsSelect action="Resume" />;
 		case "send-notification":
 			return <div>TODO send notification</div>;
 		case "cancel-flow-run":
